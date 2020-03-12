@@ -23,6 +23,12 @@ before do
     @current_user = users_table.where(id: session["user_id"]).to_a[0]
 end
 
+get "/send_text" do
+    #use twilio api
+    
+
+end
+
 # homepage and list of events (aka "index")
 get "/" do
     puts "params: #{params}"
@@ -79,6 +85,18 @@ end
 post "/rsvps/:id/update" do
     puts "params: #{params}"
 
+    # first find the event to update
+    @rsvp = rsvps_table.where(id: params["id"]).to_a[0]
+    @event = events_table.where(id: @rsvp[:event_id]).to_a[0]
+    # next we want to the row in the rsvps table with the rsvp form data
+    if @current_user && @current_user[:id] == rsvp[:user_id]
+    rsvps_table.where(id: params["id"]).update(
+        comments: params["comments"],
+        going: params["going"]
+        )
+    else
+        view "error"
+    end
     view "update_rsvp"
 end
 
@@ -102,11 +120,17 @@ end
 post "/users/create" do
     puts "params: #{params}"
 
+    #don't let user re-sign-up
+    existing_user = users_table.where(email: params["email"]).to_a[0]
+    if existing_user
+        view "error"
+    else
     users_table.insert(
         name: params["name"],
         email: params["email"],
         password: BCrypt::Password.create(params["password"])
     )
+    end
     view "create_user"
 end
 
@@ -139,5 +163,5 @@ end
 get "/logout" do
     # remove encrypted cookie for logged out user
     session["user_id"] = nil
-    view "logout"
+    redirect "/logins/new"
 end
